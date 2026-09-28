@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Employee Attendance & Payroll Management System</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+        <div class="nav-brand">
+            <div class="logo-icon">💼</div>
+            <div>
+                <h1>SmartPayroll</h1>
+                <span class="subtitle">Attendance & Payroll System</span>
+            </div>
+        </div>
+
+        <nav class="nav-links">
+            <button class="nav-btn active" onclick="switchTab('dashboard')">
+                <span class="icon">📊</span> Dashboard
+            </button>
+            <button class="nav-btn" onclick="switchTab('employees')">
+                <span class="icon">👥</span> Employees
+            </button>
+            <button class="nav-btn" onclick="switchTab('attendance')">
+                <span class="icon">📅</span> Attendance
+            </button>
+            <button class="nav-btn" onclick="switchTab('payroll')">
+                <span class="icon">💰</span> Payroll
+            </button>
+
+        </nav>
+
+        <div class="header-right">
+            <span class="system-time" id="liveClock">Loading time...</span>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container">
+
+        <!-- ======================================================== -->
+        <!-- TAB 1: DASHBOARD -->
+        <!-- ======================================================== -->
+        <section id="tab-dashboard" class="tab-content active">
+            <div class="section-header">
+                <div>
+                    <h2>System Overview</h2>
+                    <p class="section-desc">Real-time statistics for workforce attendance and monthly payroll.</p>
+                </div>
+                <div class="quick-actions">
+                    <button class="btn btn-primary" onclick="openAddEmployeeModal()">+ Add Employee</button>
+                    <button class="btn btn-secondary" onclick="quickMarkAllToday()">⚡ Mark All Present Today</button>
+                </div>
+            </div>
+
+            <!-- KPI Metric Cards -->
+            <div class="stats-grid">
+                <div class="stat-card blue">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Employees</span>
+                        <h3 id="statTotalEmployees">0</h3>
+                        <span class="stat-sub">Active staff members</span>
+                    </div>
+                </div>
+
+                <div class="stat-card green">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Present Today</span>
+                        <h3 id="statPresentToday">0</h3>
+                        <span class="stat-sub" id="statPresentRate">Attendance recorded</span>
+                    </div>
+                </div>
+
+                <div class="stat-card red">
+                    <div class="stat-icon">❌</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Absent Today</span>
+                        <h3 id="statAbsentToday">0</h3>
+                        <span class="stat-sub">Without attendance</span>
+                    </div>
+                </div>
+
+                <div class="stat-card orange">
+                    <div class="stat-icon">🏖️</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Leave / Half Day</span>
+                        <h3 id="statLeaveToday">0</h3>
+                        <span class="stat-sub">Special status</span>
+                    </div>
+                </div>
+
+                <div class="stat-card purple full-width">
+                    <div class="stat-icon">💵</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Estimated Monthly Payroll Outflow</span>
+                        <h3 id="statMonthlyPayroll">₹0.00</h3>
+                        <span class="stat-sub" id="statPayrollPeriod">Current Month Net Payout</span>
+                    </div>
+                    <button class="btn btn-sm btn-white" onclick="switchTab('payroll')">Manage Payroll →</button>
+                </div>
+            </div>
+
+            <!-- Quick Overview Table -->
+            <div class="card mt-4">
+                <div class="card-header flex-between">
+                    <h3>Today's Attendance Snapshot (<span id="dashboardDateText"></span>)</h3>
+                    <button class="btn btn-sm btn-outline" onclick="switchTab('attendance')">View All Attendance →</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Emp ID</th>
+                                <th>Name</th>
+                                <th>Department</th>
+                                <th>Status</th>
+                                <th>Check In</th>
+                                <th>Check Out</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboardAttendanceTable">
+                            <tr><td colspan="7" class="text-center">Loading today's attendance...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- TAB 2: EMPLOYEES -->
+        <!-- ======================================================== -->
+        <section id="tab-employees" class="tab-content">
+            <div class="section-header flex-between">
+                <div>
+                    <h2>Employee Directory</h2>
+                    <p class="section-desc">Manage employee profiles, designations, and base salaries.</p>
+                </div>
+                <div class="header-controls">
+                    <input type="text" id="employeeSearchInput" placeholder="🔍 Search by name or code..." oninput="filterEmployees()">
+                    <button class="btn btn-primary" onclick="openAddEmployeeModal()">+ Add New Employee</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Full Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Department</th>
+                                <th>Designation</th>
+                                <th>Basic Salary</th>
+                                <th>Joining Date</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employeesTableBody">
+                            <tr><td colspan="9" class="text-center">Loading employee records...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- TAB 3: SMART ATTENDANCE -->
+        <!-- ======================================================== -->
+        <section id="tab-attendance" class="tab-content">
+            <div class="section-header flex-between">
+                <div>
+                    <h2>Smart Attendance Tracking</h2>
+                    <p class="section-desc">Record daily check-in, check-out, and attendance status.</p>
+                </div>
+                <div class="header-controls">
+                    <div class="date-picker-group">
+                        <label for="attendanceDatePicker"><strong>Date:</strong></label>
+                        <input type="date" id="attendanceDatePicker" onchange="loadAttendance()">
+                    </div>
+                    <button class="btn btn-success" onclick="markAllSelectedDatePresent()">⚡ Mark All Present</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Emp Code</th>
+                                <th>Employee Name</th>
+                                <th>Department</th>
+                                <th>Status</th>
+                                <th>Check In</th>
+                                <th>Check Out</th>
+                                <th>Remarks</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTableBody">
+                            <tr><td colspan="8" class="text-center">Loading attendance list...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- TAB 4: SMART PAYROLL -->
+        <!-- ======================================================== -->
+        <section id="tab-payroll" class="tab-content">
+            <div class="section-header flex-between">
+                <div>
+                    <h2>Smart Payroll & Salary Management</h2>
+                    <p class="section-desc">Auto-calculate salaries based on attendance, allowances (HRA, DA), and deductions (PF, Tax).</p>
+                </div>
+                <div class="header-controls">
+                    <select id="payrollMonthSelect" onchange="loadPayroll()">
+                        <option value="1">January</option>
+                        <option value="2">February</option>
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                    <select id="payrollYearSelect" onchange="loadPayroll()">
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="generateSmartPayroll()">⚙️ Auto-Generate Payroll</button>
+                </div>
+            </div>
+
+            <!-- Formula explanation card for beginners -->
+            <div class="info-banner">
+                <strong>💡 How Smart Payroll is Calculated:</strong>
+                <span>Gross Pay = Basic + HRA (20%) + DA (10%)</span> | 
+                <span>Deductions = Absenteeism Loss of Pay + PF (12%) + Tax (5%)</span> | 
+                <span><strong>Net Salary = Gross Pay - Deductions</strong></span>
+            </div>
+
+            <div class="card mt-3">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Emp Code</th>
+                                <th>Name</th>
+                                <th>Dept</th>
+                                <th>Basic (₹)</th>
+                                <th>Allowances (₹)</th>
+                                <th>Days (Att/Total)</th>
+                                <th>Deductions (₹)</th>
+                                <th>Net Salary (₹)</th>
+                                <th>Status</th>
+                                <th class="text-center">Payslip</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payrollTableBody">
+                            <tr><td colspan="10" class="text-center">Loading payroll data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- TAB 5: SYSTEM INFO -->
+        <!-- ======================================================== -->
+        <section id="tab-system-info" class="tab-content">
+            <div class="section-header">
+                <div>
+                    <h2>Project Architecture & Technologies</h2>
+                    <p class="section-desc">Designed purely using HTML, CSS, JavaScript, Java, and MySQL with zero frameworks.</p>
+                </div>
+            </div>
+
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <div class="tech-card-header">
+                        <span class="tech-icon">☕</span>
+                        <h3>Java (Backend Server)</h3>
+                    </div>
+                    <p>Uses Java SE's built-in <code>com.sun.net.httpserver.HttpServer</code>. Handles REST endpoints, multithreaded requests, and static file serving without Spring Boot or Maven.</p>
+                    <ul>
+                        <li><strong>Main.java:</strong> Server startup and route mapping</li>
+                        <li><strong>DBConnection.java:</strong> Standard JDBC connection</li>
+                        <li><strong>EmployeeHandler.java:</strong> Employee CRUD operations</li>
+                        <li><strong>AttendanceHandler.java:</strong> Attendance tracking</li>
+                        <li><strong>PayrollHandler.java:</strong> Smart salary calculations</li>
+                    </ul>
+                </div>
+
+                <div class="tech-card">
+                    <div class="tech-card-header">
+                        <span class="tech-icon">🐬</span>
+                        <h3>MySQL (Database)</h3>
+                    </div>
+                    <p>Relational database management system storing persistent records with referential integrity and foreign keys.</p>
+                    <ul>
+                        <li><strong>Database:</strong> <code>smart_payroll_db</code></li>
+                        <li><strong>employees:</strong> Stores employee profiles & base salary</li>
+                        <li><strong>attendance:</strong> Tracks daily check-in/out and statuses</li>
+                        <li><strong>payroll:</strong> Records calculated monthly payslips</li>
+                    </ul>
+                </div>
+
+                <div class="tech-card">
+                    <div class="tech-card-header">
+                        <span class="tech-icon">🌐</span>
+                        <h3>HTML5 & Modern CSS3</h3>
+                    </div>
+                    <p>Clean, semantic markup styled with responsive Flexbox and CSS Grid. Zero frontend frameworks (no Bootstrap, no React) - 100% beginner friendly.</p>
+                    <ul>
+                        <li>Responsive layouts for desktop, tablet, and mobile</li>
+                        <li>Interactive modal dialogs & toast alerts</li>
+                        <li>Printable formatted payslip view</li>
+                    </ul>
+                </div>
+
+                <div class="tech-card">
+                    <div class="tech-card-header">
+                        <span class="tech-icon">⚡</span>
+                        <h3>JavaScript (Vanilla JS)</h3>
+                    </div>
+                    <p>Pure client-side JavaScript using modern ES6+ <code>fetch()</code> API to interact seamlessly with Java backend endpoints.</p>
+                    <ul>
+                        <li>Single Page Application (SPA) tab switching</li>
+                        <li>Live search filtering & dynamic DOM rendering</li>
+                        <li>Instant UI feedback with toasts</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ======================================================== -->
+    <!-- MODAL: ADD / EDIT EMPLOYEE -->
+    <!-- ======================================================== -->
+    <div id="employeeModal" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 id="modalEmployeeTitle">Add New Employee</h3>
+                <button class="modal-close" onclick="closeEmployeeModal()">&times;</button>
+            </div>
+            <form id="employeeForm" onsubmit="handleEmployeeSubmit(event)">
+                <input type="hidden" id="empFormId" value="0">
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="empFormCode">Employee Code *</label>
+                            <input type="text" id="empFormCode" placeholder="e.g. EMP106" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="empFormName">Full Name *</label>
+                            <input type="text" id="empFormName" placeholder="e.g. Rahul Verma" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="empFormEmail">Email Address *</label>
+                            <input type="email" id="empFormEmail" placeholder="rahul@example.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="empFormPhone">Phone Number</label>
+                            <input type="text" id="empFormPhone" placeholder="9876543210">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="empFormDept">Department *</label>
+                            <select id="empFormDept" required>
+                                <option value="Engineering">Engineering</option>
+                                <option value="Human Resources">Human Resources</option>
+                                <option value="Finance">Finance</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="Operations">Operations</option>
+                                <option value="Sales">Sales</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="empFormDesignation">Designation *</label>
+                            <input type="text" id="empFormDesignation" placeholder="e.g. Software Developer" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="empFormSalary">Basic Monthly Salary (₹) *</label>
+                            <input type="number" id="empFormSalary" min="1000" step="500" placeholder="e.g. 40000" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="empFormJoinDate">Joining Date *</label>
+                            <input type="date" id="empFormJoinDate" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" onclick="closeEmployeeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="empSubmitBtn">Save Employee</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- MODAL: PRINTABLE PAYSLIP VIEW -->
+    <!-- ======================================================== -->
+    <div id="payslipModal" class="modal">
+        <div class="modal-dialog payslip-dialog">
+            <div class="modal-header no-print">
+                <h3>Employee Payslip</h3>
+                <div>
+                    <button class="btn btn-sm btn-primary" onclick="window.print()">🖨️ Print Payslip</button>
+                    <button class="modal-close" onclick="closePayslipModal()">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" id="payslipContent">
+                <!-- Dynamically populated via JavaScript -->
+            </div>
+            <div class="modal-footer no-print">
+                <button class="btn btn-outline" onclick="closePayslipModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
