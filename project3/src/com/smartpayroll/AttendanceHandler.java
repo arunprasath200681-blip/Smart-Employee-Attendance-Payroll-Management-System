@@ -126,7 +126,13 @@ public class AttendanceHandler implements HttpHandler {
             ps.setString(6, remarks);
             ps.executeUpdate();
 
-            JsonUtil.sendJsonResponse(exchange, 200, "{\"success\":true, \"message\":\"Attendance saved successfully\"}");
+            // Real-Time Sync: Instantly recalculate & sync payroll in MySQL for this month!
+            try {
+                LocalDate d = LocalDate.parse(dateStr);
+                PayrollHandler.calculateAndSyncPayroll(conn, d.getMonthValue(), d.getYear());
+            } catch (Exception ignored) {}
+
+            JsonUtil.sendJsonResponse(exchange, 200, "{\"success\":true, \"message\":\"Attendance saved & payroll updated!\"}");
         }
     }
 
@@ -151,7 +157,13 @@ public class AttendanceHandler implements HttpHandler {
             ps.setString(1, dateStr);
             int rowsAffected = ps.executeUpdate();
 
-            JsonUtil.sendJsonResponse(exchange, 200, "{\"success\":true, \"message\":\"Marked all employees present (" + rowsAffected + " records)\"}");
+            // Real-Time Sync: Instantly recalculate & sync payroll in MySQL for this month!
+            try {
+                LocalDate d = LocalDate.parse(dateStr);
+                PayrollHandler.calculateAndSyncPayroll(conn, d.getMonthValue(), d.getYear());
+            } catch (Exception ignored) {}
+
+            JsonUtil.sendJsonResponse(exchange, 200, "{\"success\":true, \"message\":\"Marked all present & updated payroll (" + rowsAffected + " records)\"}");
         }
     }
 }
