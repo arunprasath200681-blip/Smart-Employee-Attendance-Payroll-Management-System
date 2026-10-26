@@ -4,8 +4,9 @@ A beginner-friendly, full-stack application built **strictly using only**:
 - **HTML5** (Structure, Tables & Forms)
 - **CSS3** (Styling, Responsive UI, & Printable Payslip)
 - **JavaScript (Vanilla JS)** (Client-side interactivity & `fetch` API)
-- **Java Servlets (`HttpServlet`)** (Backend business logic using standard HTTP Servlets — **Zero Frameworks! No Spring Boot, No Maven**)
-- **MySQL** (Relational Database with JDBC)
+- **Java (Jakarta EE Servlets + JDBC)** (Backend business logic using standard HTTP Servlets and direct JDBC — **Zero Frameworks! No Spring Boot, No Maven, No Property Files**)
+- **XML (`web.xml`)** (Standard Jakarta EE Deployment Descriptor for tracking and mapping servlets)
+- **MySQL** (Relational Database with standard JDBC)
 
 ---
 
@@ -44,9 +45,11 @@ A beginner-friendly, full-stack application built **strictly using only**:
 
 ```text
 d:\project3\
-├── config.properties          # MySQL credentials and server port
 ├── database.sql               # MySQL script to create database, tables & sample data
-├── setup_database.bat         # One-click script to initialize database
+├── README.md                  # Project documentation & viva guide
+├── .gitignore                 # Ignores bin/, *.class, and temp files
+├── .classpath                 # Eclipse/VS Code Java classpath configuration
+├── .project                   # Eclipse/VS Code Java project definition
 ├── lib\
 │   ├── mysql-connector-j.jar  # Official MySQL JDBC Driver jar
 │   └── servlet-api.jar        # Official Jakarta Servlet API jar
@@ -54,7 +57,7 @@ d:\project3\
 │   └── com\
 │       └── smartpayroll\
 │           ├── Main.java              # Server startup hosting HttpServlets
-│           ├── DBConnection.java      # MySQL JDBC connection manager
+│           ├── DBConnection.java      # Standard JDBC connection (URL, user, password)
 │           ├── JsonUtil.java          # Helper for JSON serialization
 │           ├── ServletBridge.java     # Bridge connecting HttpServlets to standalone runner
 │           ├── EmployeeServlet.java   # HttpServlet: /api/employees/* (doGet, doPost, doDelete)
@@ -69,51 +72,42 @@ d:\project3\
     ├── js\
     │   └── app.js             # Pure JavaScript with fetch() calls to Servlets
     └── WEB-INF\
-        └── web.xml            # Standard Servlet deployment descriptor
+        └── web.xml            # Standard Jakarta EE XML file for tracking & mapping servlets
 ```
 
 ---
 
 ## 🚀 How to Run in VS Code
 
-### Step 1: Verify MySQL Credentials
-Open `config.properties` and verify your MySQL password:
-```properties
-db.url=jdbc:mysql://localhost:3306/smart_payroll_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-db.user=root
-db.password=Arun@2006
-server.port=8080
-```
+### Step 1: Open VS Code Terminal
+In VS Code, open the terminal (`Terminal -> New Terminal`).
 
-### Step 2: Compile Java Servlets
-In the VS Code terminal (`Terminal -> New Terminal`):
+### Step 2: Compile & Run in One Step
+Paste and execute this single command:
 ```powershell
-javac -cp "lib/*" -d bin src/com/smartpayroll/*.java
+javac -cp "lib/*" -d bin src/com/smartpayroll/*.java ; java -cp "bin;lib/*" com.smartpayroll.Main
 ```
 
-### Step 3: Run the Application
-```powershell
-java -cp "bin;lib/*" com.smartpayroll.Main
-```
-
-### Step 4: Open Browser
-Open your browser and navigate to:
+### Step 3: Open Browser
+Navigate to:
 ```
 http://localhost:8080/
 ```
 
 ---
 
-## 🎓 How to Explain HttpServlets in Viva / Interviews
+## 🎓 Viva & Interview Q&A
 
-- **Q: What are Servlets?**  
-  *Answer:* A Servlet (`HttpServlet`) is a Java class that handles HTTP requests and generates dynamic responses. It follows standard lifecycle methods:
-  - `doGet(HttpServletRequest req, HttpServletResponse resp)`: Handles GET requests (retrieving data from MySQL).
-  - `doPost(HttpServletRequest req, HttpServletResponse resp)`: Handles POST requests (inserting/updating records).
-  - `doDelete(HttpServletRequest req, HttpServletResponse resp)`: Handles DELETE requests (deleting records).
+- **Q: Which technologies are used in this project?**  
+  *Answer:* 
+  - Frontend: HTML5, CSS3, Vanilla JavaScript.
+  - Backend: Java (Jakarta EE HttpServlets + standard JDBC).
+  - Tracking / Descriptor: XML (`web.xml`).
+  - Database: MySQL.
+  - No frameworks (no Spring Boot, no Maven, no Hibernate).
 
-- **Q: Where is `web.xml` located?**  
-  *Answer:* Inside `web/WEB-INF/web.xml`. It declares each servlet (`<servlet>`) and maps its URL route pattern (`<servlet-mapping>`).
+- **Q: Why is the XML file (`web.xml`) used?**  
+  *Answer:* `web.xml` is the standard Jakarta EE Deployment Descriptor. It defines servlet names and maps each URL route pattern (`/api/employees/*`, `/api/attendance/*`, `/api/payroll/*`, `/api/dashboard/*`) to its respective `HttpServlet` class.
 
-- **Q: How does this project run standalone without Tomcat installed?**  
-  *Answer:* All business logic classes (`EmployeeServlet`, `AttendanceServlet`, `PayrollServlet`, `DashboardServlet`) extend `HttpServlet`. To make running easy for development and demonstration, `Main.java` includes a lightweight `ServletBridge` that routes incoming HTTP requests directly into `servlet.service(req, resp)`. At the same time, because these are genuine `HttpServlet` classes and `web.xml` is present, the project can also be deployed directly to Apache Tomcat.
+- **Q: How does JDBC connect to MySQL?**  
+  *Answer:* Inside `DBConnection.java`, we use `Class.forName("com.mysql.cj.jdbc.Driver")` and `DriverManager.getConnection(url, user, password)` with the MySQL Connector/J driver. No external configuration or properties files are needed.

@@ -2,10 +2,7 @@ package com.smartpayroll;
 
 import com.sun.net.httpserver.HttpServer;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.net.InetSocketAddress;
-import java.util.Properties;
 import java.util.concurrent.Executors;
 
 /**
@@ -14,38 +11,28 @@ import java.util.concurrent.Executors;
  * The main entry point for the Smart Employee Attendance & Payroll Management System.
  * 
  * Beginner Concept:
- * Hosts standard HttpServlets (EmployeeServlet, AttendanceServlet, PayrollServlet,
- * DashboardServlet) inside a lightweight standalone server with zero external setup needed.
+ * Hosts standard Jakarta EE HttpServlets (EmployeeServlet, AttendanceServlet,
+ * PayrollServlet, DashboardServlet) inside a lightweight standalone server with zero extra tools.
  */
 public class Main {
 
     public static void main(String[] args) {
         int port = 8080;
 
-        // Load configured port from config.properties if specified
-        try (InputStream is = new FileInputStream("config.properties")) {
-            Properties props = new Properties();
-            props.load(is);
-            String portStr = props.getProperty("server.port");
-            if (portStr != null && !portStr.trim().isEmpty()) {
-                port = Integer.parseInt(portStr.trim());
-            }
-        } catch (Exception ignored) {
-            // Use default port 8080
-        }
-
         System.out.println("==============================================================");
         System.out.println(" Smart Employee Attendance & Payroll Management System");
-        System.out.println(" Technologies: Java (HttpServlets) + MySQL + HTML + CSS + JS");
+        System.out.println(" Technologies: Java (Jakarta EE Servlets + JDBC) + MySQL");
+        System.out.println("               HTML5 + CSS3 + JavaScript (Vanilla JS)");
+        System.out.println(" Configuration: web.xml (Servlet Mapping)");
         System.out.println("==============================================================");
 
         // Verify MySQL database connection
-        System.out.println("[Step 1/2] Checking MySQL connection...");
+        System.out.println("[Step 1/2] Checking MySQL connection via JDBC...");
         if (DBConnection.testConnection()) {
             System.out.println("[SUCCESS] Successfully connected to MySQL database 'smart_payroll_db'!");
         } else {
             System.err.println("[WARNING] Could not connect to MySQL database.");
-            System.err.println("          Please ensure MySQL is running and check 'config.properties'.");
+            System.err.println("          Please ensure the MySQL service is running.");
         }
 
         // Initialize server hosting HttpServlets
@@ -53,7 +40,7 @@ public class Main {
             System.out.println("[Step 2/2] Starting server with HttpServlets on port " + port + "...");
             HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
-            // Register Servlets (HttpServlet instances)
+            // Register Servlets (HttpServlet instances mapped in web.xml)
             server.createContext("/api/dashboard", new ServletBridge(new DashboardServlet()));
             server.createContext("/api/employees", new ServletBridge(new EmployeeServlet()));
             server.createContext("/api/attendance", new ServletBridge(new AttendanceServlet()));
