@@ -1,8 +1,12 @@
 package com.smartpayroll;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -15,76 +19,46 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * PayrollHandler.java
+ * PayrollServlet.java
  * -------------------
- * The core "Smart Payroll Engine":
- * - GET  /api/payroll?month=6&year=2026   -> Auto-syncs with MySQL attendance and lists payroll records
- * - POST /api/payroll/generate           -> Force recalculation & sync from attendance table
- * - POST /api/payroll/update-status      -> Mark payroll status as Paid / Pending
+ * HTTP Servlet implementing the Smart Payroll Engine:
+ * - GET  /api/payroll?month=6&year=2026   -> doGet()  : Auto-syncs with MySQL attendance and returns payroll
+ * - POST /api/payroll/generate           -> doPost() : Explicitly triggers recalculation & sync
+ * - POST /api/payroll/update-status      -> doPost() : Updates payment status (Paid / Pending)
  * 
  * Direct Attendance <-> Payroll Connection in MySQL:
- * - Reads attendance table records for the chosen month and year
+ * - Reads attendance records for the selected month and year
  * - Counts:
  *     Absent days = COUNT(status = 'Absent')
- *     Half days   = COUNT(status = 'Half Day') (counts as 0.5 absent day)
+ *     Half days   = COUNT(status = 'Half Day') (0.5 absent day)
  * - Effective Absent Days = Absent days + (0.5 * Half days)
  * - Effective Present Days = Total Days in Month - Effective Absent Days
  * - Loss of Pay = Effective Absent Days * (Gross Salary / Total Days in Month)
- * - Net Take-Home Salary = Gross Salary - Loss of Pay - PF (12%) - Tax (5%)
+ * - Net Salary = Gross Salary - Loss of Pay - PF (12%) - Tax (5%)
  */
-public class PayrollHandler implements HttpHandler {
+@WebServlet("/api/payroll/*")
+public class PayrollServlet extends HttpServlet {
 
     @Override
-    public void handle(HttpExchange exchange) throws IOException {
-        String method = exchange.getRequestMethod().toUpperCase();
-        String path = exchange.getRequestURI().getPath();
-
-        // Handle CORS pre-flight
-        if ("OPTIONS".equals(method)) {
-            JsonUtil.sendJsonResponse(exchange, 200, "{\"status\":\"ok\"}");
-            return;
-        }
-
-        try {
-            if ("GET".equals(method)) {
-                getPayrollRecords(exchange);
-            } else if ("POST".equals(method)) {
-                if (path.endsWith("/generate")) {
-                    generatePayroll(exchange);
-                } else if (path.endsWith("/update-status")) {
-                    updatePayrollStatus(exchange);
-                } else {
-                    JsonUtil.sendJsonResponse(exchange, 404, "{\"error\":\"Unknown payroll endpoint\"}");
-                }
-            } else {
-                JsonUtil.sendJsonResponse(exchange, 405, "{\"error\":\"Method Not Allowed\"}");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            JsonUtil.sendJsonResponse(exchange, 500, "{\"error\":\"" + JsonUtil.escape(e.getMessage()) + "\"}");
-        }
-    }
-
-    /**
-     * Fetches all payroll records for the specified month and year.
-     * Automatically calculates & syncs with latest attendance records from MySQL first!
-     */
-    private void getPayrollRecords(HttpExchange exchange) throws SQLException, IOException {
-        String query = exchange.getRequestURI().getQuery();
-        Map<String, String> params = JsonUtil.parseQueryParams(query);
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
 
         int month = LocalDate.now().getMonthValue();
         int year = LocalDate.now().getYear();
 
-        if (params.get("month") != null && !params.get("month").isEmpty()) {
-            month = Integer.parseInt(params.get("month"));
+        String monthStr = req.getParameter("month");
+        String yearStr = req.getParameter("year");
+
+        if (monthStr != null && !monthStr.trim().isEmpty()) {
+            try { month = Integer.parseInt(monthStr.trim()); } catch (NumberFormatException ignored) {}
         }
-        if (params.get("year") != null && !params.get("year").isEmpty()) {
-            year = Integer.parseInt(params.get("year"));
+        if (yearStr != null && !yearStr.trim().isEmpty()) {
+            try { year = Integer.parseInt(yearStr.trim()); } catch (NumberFormatException ignored) {}
         }
 
         try (Connection conn = DBConnection.getConnection()) {
-            // STEP 1: Automatically calculate and sync payroll from attendance table!
+            // STEP 1: Automatically calculate and sync payroll directly from attendance table!
             calculateAndSyncPayroll(conn, month, year);
 
             // STEP 2: Fetch and return the freshly updated payroll records
@@ -99,32 +73,78 @@ public class PayrollHandler implements HttpHandler {
                 ps.setInt(2, year);
                 try (ResultSet rs = ps.executeQuery()) {
                     String json = JsonUtil.resultSetToJson(rs);
-                    JsonUtil.sendJsonResponse(exchange, 200, json);
+                    resp.setStatus(HttpServletResponse.SC_OK);
+                    resp.getWriter().write(json);
                 }
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            resp.getWriter().write("{\"error\":\"" + JsonUtil.escape(e.getMessage()) + "\"}");
         }
     }
 
-    /**
-     * Endpoint to explicitly trigger payroll generation
-     */
-    private void generatePayroll(HttpExchange exchange) throws SQLException, IOException {
-        String body = JsonUtil.readRequestBody(exchange);
-        Map<String, String> data = JsonUtil.parseJson(body);
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
 
-        int month = LocalDate.now().getMonthValue();
-        int year = LocalDate.now().getYear();
+        String uri = req.getRequestURI();
+        if (uri == null) uri = "";
 
-        if (data.get("month") != null && !data.get("month").isEmpty()) {
-            month = Integer.parseInt(data.get("month"));
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader reader = req.getReader()) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line);
+            }
         }
-        if (data.get("year") != null && !data.get("year").isEmpty()) {
-            year = Integer.parseInt(data.get("year"));
-        }
+
+        Map<String, String> data = JsonUtil.parseJson(sb.toString());
 
         try (Connection conn = DBConnection.getConnection()) {
-            int count = calculateAndSyncPayroll(conn, month, year);
-            JsonUtil.sendJsonResponse(exchange, 200, "{\"success\":true, \"message\":\"Smart payroll generated and synced with attendance for " + count + " employees!\"}");
+            if (uri.endsWith("/generate")) {
+                int month = LocalDate.now().getMonthValue();
+                int year = LocalDate.now().getYear();
+
+                if (data.get("month") != null && !data.get("month").isEmpty()) {
+                    month = Integer.parseInt(data.get("month"));
+                }
+                if (data.get("year") != null && !data.get("year").isEmpty()) {
+                    year = Integer.parseInt(data.get("year"));
+                }
+
+                int count = calculateAndSyncPayroll(conn, month, year);
+                resp.setStatus(HttpServletResponse.SC_OK);
+                resp.getWriter().write("{\"success\":true, \"message\":\"Smart payroll generated and synced with attendance for " + count + " employees!\"}");
+
+            } else if (uri.endsWith("/update-status")) {
+                String idStr = data.get("id");
+                String status = data.get("status");
+
+                if (idStr == null || status == null) {
+                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    resp.getWriter().write("{\"error\":\"id and status are required\"}");
+                    return;
+                }
+
+                int id = Integer.parseInt(idStr);
+                String sql = "UPDATE payroll SET status = ? WHERE id = ?";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, status);
+                    ps.setInt(2, id);
+                    ps.executeUpdate();
+                    resp.setStatus(HttpServletResponse.SC_OK);
+                    resp.getWriter().write("{\"success\":true, \"message\":\"Status updated to " + status + "\"}");
+                }
+            } else {
+                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                resp.getWriter().write("{\"error\":\"Unknown payroll endpoint\"}");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            resp.getWriter().write("{\"error\":\"" + JsonUtil.escape(e.getMessage()) + "\"}");
         }
     }
 
@@ -150,7 +170,7 @@ public class PayrollHandler implements HttpHandler {
             }
         }
 
-        // 2. SQL to aggregate attendance for a specific employee in given month & year
+        // 2. SQL to aggregate attendance for an employee in given month & year
         String attSql = "SELECT " +
                         "COUNT(CASE WHEN status = 'Absent' THEN 1 END) AS absent_cnt, " +
                         "COUNT(CASE WHEN status = 'Half Day' THEN 1 END) AS half_day_cnt, " +
@@ -241,33 +261,6 @@ public class PayrollHandler implements HttpHandler {
         return syncedCount;
     }
 
-    /**
-     * Updates payment status between 'Paid' and 'Pending'.
-     */
-    private void updatePayrollStatus(HttpExchange exchange) throws SQLException, IOException {
-        String body = JsonUtil.readRequestBody(exchange);
-        Map<String, String> data = JsonUtil.parseJson(body);
-
-        String idStr = data.get("id");
-        String status = data.get("status");
-
-        if (idStr == null || status == null) {
-            JsonUtil.sendJsonResponse(exchange, 400, "{\"error\":\"id and status are required\"}");
-            return;
-        }
-
-        int id = Integer.parseInt(idStr);
-        String sql = "UPDATE payroll SET status = ? WHERE id = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, status);
-            ps.setInt(2, id);
-            ps.executeUpdate();
-            JsonUtil.sendJsonResponse(exchange, 200, "{\"success\":true, \"message\":\"Status updated to " + status + "\"}");
-        }
-    }
-
-    // Helper data holder
     private static class EmployeeSalaryInfo {
         int id;
         String name;

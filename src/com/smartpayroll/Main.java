@@ -14,9 +14,8 @@ import java.util.concurrent.Executors;
  * The main entry point for the Smart Employee Attendance & Payroll Management System.
  * 
  * Beginner Concept:
- * In pure Java (without frameworks like Spring Boot or external servlet containers),
- * the built-in 'com.sun.net.httpserver.HttpServer' creates a lightweight, high-performance
- * web server with zero external libraries.
+ * Hosts standard HttpServlets (EmployeeServlet, AttendanceServlet, PayrollServlet,
+ * DashboardServlet) inside a lightweight standalone server with zero external setup needed.
  */
 public class Main {
 
@@ -37,8 +36,7 @@ public class Main {
 
         System.out.println("==============================================================");
         System.out.println(" Smart Employee Attendance & Payroll Management System");
-        System.out.println(" Technologies: Java + MySQL + HTML + CSS + JavaScript");
-        System.out.println(" (Zero Frameworks - Pure Standard Java & Web Technologies)");
+        System.out.println(" Technologies: Java (HttpServlets) + MySQL + HTML + CSS + JS");
         System.out.println("==============================================================");
 
         // Verify MySQL database connection
@@ -50,33 +48,33 @@ public class Main {
             System.err.println("          Please ensure MySQL is running and check 'config.properties'.");
         }
 
-        // Initialize Java built-in HTTP server
+        // Initialize server hosting HttpServlets
         try {
-            System.out.println("[Step 2/2] Starting built-in HTTP server on port " + port + "...");
+            System.out.println("[Step 2/2] Starting server with HttpServlets on port " + port + "...");
             HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
-            // Register API handlers (REST endpoints)
-            server.createContext("/api/dashboard", new DashboardHandler());
-            server.createContext("/api/employees", new EmployeeHandler());
-            server.createContext("/api/attendance", new AttendanceHandler());
-            server.createContext("/api/payroll", new PayrollHandler());
+            // Register Servlets (HttpServlet instances)
+            server.createContext("/api/dashboard", new ServletBridge(new DashboardServlet()));
+            server.createContext("/api/employees", new ServletBridge(new EmployeeServlet()));
+            server.createContext("/api/attendance", new ServletBridge(new AttendanceServlet()));
+            server.createContext("/api/payroll", new ServletBridge(new PayrollServlet()));
 
-            // Register Static Web Handler for serving HTML, CSS, JavaScript files
+            // Static Web Handler for serving HTML, CSS, JavaScript files
             server.createContext("/", new StaticFileHandler("web"));
 
-            // Multi-threaded executor for handling concurrent browser requests
+            // Multi-threaded executor
             server.setExecutor(Executors.newFixedThreadPool(10));
             server.start();
 
             System.out.println("==============================================================");
-            System.out.println(" Application is LIVE and ready!");
+            System.out.println(" Application is LIVE with HttpServlets!");
             System.out.println(" Open your browser and navigate to:");
             System.out.println(" --> http://localhost:" + port + "/");
             System.out.println(" Press Ctrl+C in this terminal to stop the server.");
             System.out.println("==============================================================");
 
         } catch (Exception e) {
-            System.err.println("[ERROR] Failed to start HTTP server: " + e.getMessage());
+            System.err.println("[ERROR] Failed to start server: " + e.getMessage());
             e.printStackTrace();
         }
     }

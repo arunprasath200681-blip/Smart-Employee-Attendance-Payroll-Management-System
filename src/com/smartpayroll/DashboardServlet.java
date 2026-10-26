@@ -1,7 +1,10 @@
 package com.smartpayroll;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -11,43 +14,19 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 
 /**
- * DashboardHandler.java
+ * DashboardServlet.java
  * --------------------
- * Provides summary metrics for the interactive dashboard:
- * - Total employee count
- * - Today's attendance counts (Present, Absent, Leave, Half Day)
- * - Monthly payroll total outflow
- * - Department distribution
- * 
- * Beginner Concept:
- * Aggregations in SQL (COUNT, SUM) allow quick real-time analytics
- * that feed directly into visual cards and status badges on the UI.
+ * HTTP Servlet providing real-time KPI metrics for the Dashboard:
+ * - GET /api/dashboard -> doGet() : Returns employee count, today's attendance stats, and monthly payroll outflow.
  */
-public class DashboardHandler implements HttpHandler {
+@WebServlet("/api/dashboard/*")
+public class DashboardServlet extends HttpServlet {
 
     @Override
-    public void handle(HttpExchange exchange) throws IOException {
-        String method = exchange.getRequestMethod().toUpperCase();
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
 
-        if ("OPTIONS".equals(method)) {
-            JsonUtil.sendJsonResponse(exchange, 200, "{\"status\":\"ok\"}");
-            return;
-        }
-
-        if (!"GET".equals(method)) {
-            JsonUtil.sendJsonResponse(exchange, 405, "{\"error\":\"Method Not Allowed\"}");
-            return;
-        }
-
-        try {
-            getDashboardStats(exchange);
-        } catch (Exception e) {
-            e.printStackTrace();
-            JsonUtil.sendJsonResponse(exchange, 500, "{\"error\":\"" + JsonUtil.escape(e.getMessage()) + "\"}");
-        }
-    }
-
-    private void getDashboardStats(HttpExchange exchange) throws SQLException, IOException {
         int totalEmployees = 0;
         int presentToday = 0;
         int absentToday = 0;
@@ -65,7 +44,7 @@ public class DashboardHandler implements HttpHandler {
                 if (rs.next()) totalEmployees = rs.getInt(1);
             }
 
-            // 2. Today's attendance
+            // 2. Today's attendance breakdown
             String sql2 = "SELECT status, COUNT(*) FROM attendance WHERE date = CURDATE() GROUP BY status";
             try (PreparedStatement ps = conn.prepareStatement(sql2);
                  ResultSet rs = ps.executeQuery()) {
@@ -100,7 +79,13 @@ public class DashboardHandler implements HttpHandler {
             json.append("\"currentYear\":").append(currentYear);
             json.append("}");
 
-            JsonUtil.sendJsonResponse(exchange, 200, json.toString());
+            resp.setStatus(HttpServletResponse.SC_OK);
+            resp.getWriter().write(json.toString());
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            resp.getWriter().write("{\"error\":\"" + JsonUtil.escape(e.getMessage()) + "\"}");
         }
     }
 }
