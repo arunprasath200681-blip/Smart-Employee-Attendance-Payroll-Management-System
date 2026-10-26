@@ -4,9 +4,10 @@ A beginner-friendly, full-stack application built **strictly using only**:
 - **HTML5** (Structure, Tables & Forms)
 - **CSS3** (Styling, Responsive UI, & Printable Payslip)
 - **JavaScript (Vanilla JS)** (Client-side interactivity & `fetch` API)
-- **Java (Jakarta EE Servlets + JDBC)** (Backend business logic using standard HTTP Servlets and direct JDBC — **Zero Frameworks! No Spring Boot, No Maven, No Property Files**)
-- **XML (`web.xml`)** (Standard Jakarta EE Deployment Descriptor for tracking and mapping servlets)
+- **Java (Jakarta EE HttpServlets + JDBC)** (Backend business logic using standard HttpServlets and direct JDBC — **Zero Frameworks! No Spring Boot, No Maven, No Property Files**)
+- **XML (`web.xml`)** (Standard Jakarta EE Deployment Descriptor for tracking and mapping all servlets)
 - **MySQL** (Relational Database with standard JDBC)
+- **Server:** Apache Tomcat (Runs and hosts the HttpServlets mapped in `web.xml`)
 
 ---
 
@@ -50,27 +51,26 @@ d:\project3\
 ├── .gitignore                 # Ignores bin/, *.class, and temp files
 ├── .classpath                 # Eclipse/VS Code Java classpath configuration
 ├── .project                   # Eclipse/VS Code Java project definition
-├── lib\
+├── lib\                       # External JAR libraries (MySQL JDBC + Tomcat + Servlet API)
 │   ├── mysql-connector-j.jar  # Official MySQL JDBC Driver jar
-│   └── servlet-api.jar        # Official Jakarta Servlet API jar
+│   ├── servlet-api.jar        # Official Jakarta Servlet API jar
+│   └── *.jar                  # Apache Tomcat embedded runtime JARs
 ├── src\
 │   └── com\
 │       └── smartpayroll\
-│           ├── Main.java              # Server startup hosting HttpServlets
+│           ├── Main.java              # Server launcher running Apache Tomcat
 │           ├── DBConnection.java      # Standard JDBC connection (URL, user, password)
 │           ├── JsonUtil.java          # Helper for JSON serialization
-│           ├── ServletBridge.java     # Bridge connecting HttpServlets to standalone runner
 │           ├── EmployeeServlet.java   # HttpServlet: /api/employees/* (doGet, doPost, doDelete)
 │           ├── AttendanceServlet.java # HttpServlet: /api/attendance/* (doGet, doPost)
 │           ├── PayrollServlet.java    # HttpServlet: /api/payroll/* (doGet, doPost)
-│           ├── DashboardServlet.java  # HttpServlet: /api/dashboard/* (doGet)
-│           └── StaticFileHandler.java # Serves HTML, CSS, JS files to browser
+│           └── DashboardServlet.java  # HttpServlet: /api/dashboard/* (doGet)
 └── web\
     ├── index.html             # Single-Page Application (SPA) user interface
     ├── css\
     │   └── style.css          # Clean modern styling & printable payslip CSS
     ├── js\
-    │   └── app.js             # Pure JavaScript with fetch() calls to Servlets
+    │   └── app.js             # Pure JavaScript with fetch() calls to HttpServlets
     └── WEB-INF\
         └── web.xml            # Standard Jakarta EE XML file for tracking & mapping servlets
 ```
@@ -82,7 +82,7 @@ d:\project3\
 ### Step 1: Open VS Code Terminal
 In VS Code, open the terminal (`Terminal -> New Terminal`).
 
-### Step 2: Compile & Run in One Step
+### Step 2: Compile & Run in One Command
 Paste and execute this single command:
 ```powershell
 javac -cp "lib/*" -d bin src/com/smartpayroll/*.java ; java -cp "bin;lib/*" com.smartpayroll.Main
@@ -102,12 +102,13 @@ http://localhost:8080/
   *Answer:* 
   - Frontend: HTML5, CSS3, Vanilla JavaScript.
   - Backend: Java (Jakarta EE HttpServlets + standard JDBC).
-  - Tracking / Descriptor: XML (`web.xml`).
+  - Tracking / Deployment Descriptor: XML (`web.xml`).
   - Database: MySQL.
+  - Web Server: Apache Tomcat.
   - No frameworks (no Spring Boot, no Maven, no Hibernate).
 
-- **Q: Why is the XML file (`web.xml`) used?**  
-  *Answer:* `web.xml` is the standard Jakarta EE Deployment Descriptor. It defines servlet names and maps each URL route pattern (`/api/employees/*`, `/api/attendance/*`, `/api/payroll/*`, `/api/dashboard/*`) to its respective `HttpServlet` class.
+- **Q: How are the Servlets mapped and tracked?**  
+  *Answer:* Through the standard Jakarta EE XML file `web/WEB-INF/web.xml`. It declares each servlet name and maps its URL route pattern (`/api/employees/*`, `/api/attendance/*`, `/api/payroll/*`, `/api/dashboard/*`) to the respective `HttpServlet` class.
 
-- **Q: How does JDBC connect to MySQL?**  
-  *Answer:* Inside `DBConnection.java`, we use `Class.forName("com.mysql.cj.jdbc.Driver")` and `DriverManager.getConnection(url, user, password)` with the MySQL Connector/J driver. No external configuration or properties files are needed.
+- **Q: Which server is running the HttpServlets?**  
+  *Answer:* Apache Tomcat. When `Main.java` is launched, Tomcat reads `web/WEB-INF/web.xml`, registers the servlets, and serves the application on port 8080.

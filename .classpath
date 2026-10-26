@@ -4,5 +4,14 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/mysql-connector-j.jar"/>
 	<classpathentry kind="lib" path="lib/servlet-api.jar"/>
+	<classpathentry kind="lib" path="lib/catalina.jar"/>
+	<classpathentry kind="lib" path="lib/tomcat-coyote.jar"/>
+	<classpathentry kind="lib" path="lib/tomcat-util.jar"/>
+	<classpathentry kind="lib" path="lib/tomcat-util-scan.jar"/>
+	<classpathentry kind="lib" path="lib/tomcat-api.jar"/>
+	<classpathentry kind="lib" path="lib/tomcat-jni.jar"/>
+	<classpathentry kind="lib" path="lib/annotations-api.jar"/>
+	<classpathentry kind="lib" path="lib/tomcat-juli.jar"/>
+	<classpathentry kind="lib" path="lib/jaspic-api.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -1,9 +1,9 @@
 package com.smartpayroll;
 
-import com.sun.net.httpserver.HttpServer;
+import org.apache.catalina.Context;
+import org.apache.catalina.startup.Tomcat;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
+import java.io.File;
 
 /**
  * Main.java
@@ -11,58 +11,60 @@ import java.util.concurrent.Executors;
  * The main entry point for the Smart Employee Attendance & Payroll Management System.
  * 
  * Beginner Concept:
- * Hosts standard Jakarta EE HttpServlets (EmployeeServlet, AttendanceServlet,
- * PayrollServlet, DashboardServlet) inside a lightweight standalone server with zero extra tools.
+ * Runs Apache Tomcat (Embedded) to host Jakarta EE HttpServlets.
+ * Tomcat automatically reads "web/WEB-INF/web.xml" to register and track all HttpServlets:
+ *   - EmployeeServlet   (/api/employees/*)
+ *   - AttendanceServlet (/api/attendance/*)
+ *   - PayrollServlet    (/api/payroll/*)
+ *   - DashboardServlet  (/api/dashboard/*)
+ * 
+ * Zero HttpServer. Pure HttpServlets tracked via web.xml running on Tomcat.
  */
 public class Main {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         int port = 8080;
 
         System.out.println("==============================================================");
         System.out.println(" Smart Employee Attendance & Payroll Management System");
-        System.out.println(" Technologies: Java (Jakarta EE Servlets + JDBC) + MySQL");
-        System.out.println("               HTML5 + CSS3 + JavaScript (Vanilla JS)");
-        System.out.println(" Configuration: web.xml (Servlet Mapping)");
+        System.out.println(" Technologies: Java (Jakarta EE HttpServlets + JDBC) + MySQL");
+        System.out.println("               HTML5 + CSS3 + JavaScript");
+        System.out.println(" Deployment Descriptor: web.xml (Tracking & Mapping Servlets)");
+        System.out.println(" Server: Apache Tomcat");
         System.out.println("==============================================================");
 
-        // Verify MySQL database connection
+        // Verify MySQL database connection via JDBC
         System.out.println("[Step 1/2] Checking MySQL connection via JDBC...");
         if (DBConnection.testConnection()) {
-            System.out.println("[SUCCESS] Successfully connected to MySQL database 'smart_payroll_db'!");
+            System.out.println("[SUCCESS] Connected to MySQL database 'smart_payroll_db'!");
         } else {
             System.err.println("[WARNING] Could not connect to MySQL database.");
             System.err.println("          Please ensure the MySQL service is running.");
         }
 
-        // Initialize server hosting HttpServlets
-        try {
-            System.out.println("[Step 2/2] Starting server with HttpServlets on port " + port + "...");
-            HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        // Initialize Embedded Tomcat Server
+        System.out.println("[Step 2/2] Starting Apache Tomcat on port " + port + "...");
 
-            // Register Servlets (HttpServlet instances mapped in web.xml)
-            server.createContext("/api/dashboard", new ServletBridge(new DashboardServlet()));
-            server.createContext("/api/employees", new ServletBridge(new EmployeeServlet()));
-            server.createContext("/api/attendance", new ServletBridge(new AttendanceServlet()));
-            server.createContext("/api/payroll", new ServletBridge(new PayrollServlet()));
+        Tomcat tomcat = new Tomcat();
+        tomcat.setPort(port);
+        tomcat.getConnector(); // Initialize the default HTTP connector
 
-            // Static Web Handler for serving HTML, CSS, JavaScript files
-            server.createContext("/", new StaticFileHandler("web"));
+        // Set the web application root directory to "web/" folder
+        // Tomcat automatically parses "web/WEB-INF/web.xml" to load all HttpServlets
+        String webDir = new File("web").getAbsolutePath();
+        Context ctx = tomcat.addWebapp("", webDir);
 
-            // Multi-threaded executor
-            server.setExecutor(Executors.newFixedThreadPool(10));
-            server.start();
+        // Start Tomcat
+        tomcat.start();
 
-            System.out.println("==============================================================");
-            System.out.println(" Application is LIVE with HttpServlets!");
-            System.out.println(" Open your browser and navigate to:");
-            System.out.println(" --> http://localhost:" + port + "/");
-            System.out.println(" Press Ctrl+C in this terminal to stop the server.");
-            System.out.println("==============================================================");
+        System.out.println("==============================================================");
+        System.out.println(" Application is LIVE with HttpServlets on Tomcat!");
+        System.out.println(" Open your browser and navigate to:");
+        System.out.println(" --> http://localhost:" + port + "/");
+        System.out.println(" Press Ctrl+C in this terminal to stop the server.");
+        System.out.println("==============================================================");
 
-        } catch (Exception e) {
-            System.err.println("[ERROR] Failed to start server: " + e.getMessage());
-            e.printStackTrace();
-        }
+        // Keep the server running until Ctrl+C
+        tomcat.getServer().await();
     }
 }
